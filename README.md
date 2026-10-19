@@ -1,109 +1,65 @@
-[![Linux](https://github.com/netpanzer/netpanzer/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/netpanzer/netpanzer/actions/workflows/c-cpp.yml)
-[![MacOS](https://github.com/netpanzer/netpanzer/actions/workflows/macos.yml/badge.svg)](https://github.com/netpanzer/netpanzer/actions/workflows/macos.yml)
-[![CodeQL](https://github.com/netpanzer/netpanzer/actions/workflows/codeql.yml/badge.svg)](https://github.com/netpanzer/netpanzer/actions/workflows/codeql.yml)
-# NetPanzer
-### Open Source RTS
+# NetPanzer on Outiva
 
-## Introduction
+**Fast multiplayer tank warfare, playable in your browser.**
 
-NetPanzer is an online multiplayer tactical warfare game designed for FAST
-ACTION combat. Gameplay concentrates on the core - no resource management is
-needed. The game is based on quick tactical action and unit management in
-real-time. Battles progress quickly and constantly as destroyed players respawn
-with a set of new units. Players can join or leave multiplayer games at any
-time.
+[Play NetPanzer](https://netpanzer.outiva.com)
 
-## 20+ Years of Development
+## What is NetPanzer?
 
-The original development of NetPanzer was done from PyroSoft inc. In
-1999 they stopped development and released the game 2002 in GPL and it was nearly
-forgotten, until Ingo announced it at happypenguin.org. Soon after this
-announcement a group of coders did the linux port in roughly 2 weeks, with
-another 2 weeks polishing for the first release. Since then development has picked up and slowed
-down, with various different teams and maintainers. The current maintainer of the game and masterserver
-is "winrid" on GitHub.
+NetPanzer is a real-time strategy game built around quick decisions and constant
+action. You command a battalion of armoured vehicles, fight other commanders
+for territory and try to hold key positions across the battlefield.
 
-## AI Policy
+There are no resources to harvest and no base to build. You enter the fight with
+a complete battalion, so the game gets straight to movement, positioning and
+combat. If your force is destroyed, you can choose a new battalion and return to
+the battle.
 
-All communication - pull request titles, descriptions, comments - must be written by a human. Anyone doing otherwise is instantly banned from the project forever.
+Matches keep running while players join and leave. This makes NetPanzer easy to
+drop into for a short skirmish or stay with as control of the map changes hands.
 
-**The use of AI for development outside the core team members is not allowed.**
+## Playing on Outiva
 
-The fact is you can vibe code a Netpanzer clone in five minutes. Netpanzer now serves the purpose as something we enjoy working on when we
-have time. This does not mean reading 50+ untested changed files by Claude or asking Claude "review this PR".
+Open [netpanzer.outiva.com](https://netpanzer.outiva.com), choose a commander
+name and select **Play NetPanzer**. Outiva finds the battlefield for you, so
+there is no server address or connection setup to worry about.
 
-Nobody cares about fixing sanitizer bugs or a 500kb memory leak in Netpanzer. Find something more impactful to do that doesn't waste my time.
+The first visit downloads the game and its maps, sounds and artwork. Your
+browser keeps these files so later visits are much faster.
 
-All PRs must include a video or screenshot showing the change, or the affected component still working.
+NetPanzer is currently best played with a keyboard and mouse.
 
-All graphics system related changes must be tested on Linux and Windows.
+## Your first battle
 
-## To Play
+After joining, choose your unit style and flag to deploy your battalion. Your
+goal is to capture outposts, protect the territory you hold and defeat enemy
+forces without allowing yourself to be surrounded.
 
-Go to the Releases tab in GitHub and download the version for your OS. The version in Linux repos as of 2024
-is very (8+yrs) old, so we suggest simply downloading the latest release directly.
+- Drag with the left mouse button to select tanks.
+- Left-click the ground to move, or an enemy to attack.
+- Right-drag or use the arrow keys to move around the map.
+- Press **F1** for help.
+- Press **Esc** for the game menu.
 
-Note: If you only are able to get v0.8.7 from your distribution, change the
-'server.masterservers' value in your client.cfg and server.cfg to
+NetPanzer rewards awareness and momentum. Keep your units together, watch the
+minimap, capture useful positions and keep moving.
 
-    server.masterservers = "netpanzer.io"
+## A community game
 
-One we release our next official version, this will be done automatically and the
-newer version will be more accessible to you. **Do not leave the old master server in your config** or else the game will
-crash, as 0.8.7 has a bug causing it to segfault if any servers are not available. We've fixed this in 0.9.0.
+NetPanzer began as a commercial game from PyroSoft in the late 1990s. Its source
+was later released under the GNU General Public License, allowing a community of
+players and developers to preserve and improve it for more than two decades.
 
-### Latest Download
+This repository brings that game to Outiva with a streamlined browser
+experience while keeping it compatible with NetPanzer's open-source heritage.
 
-[You can download the latest version here.](https://github.com/netpanzer/netpanzer/releases)
+## Project information
 
-[Weekly Linux AppImage is available here.](https://github.com/netpanzer/netpanzer/releases/tag/appimage-weekly)
+Developers and server operators can find architecture, build, testing and
+deployment information in [Technical details](TECHNICAL.md).
 
-Most current servers (as of 2024) are running 0.9.0+, so this is what you want if you want to play on a public server.
+For planned improvements, see the [Outiva roadmap](ROADMAP.md). Bug reports and
+changes should follow the [contribution guide](CONTRIBUTING.md).
 
-## Contributing and Reporting Bugs
-
-See [CONTRIBUTING.md](CONTRIBUTING.md)
-
-## Gameplay
-
-An extensive list of commands is available in the Help section of NetPanzer binary,
-together with some useful tips and guides.
-
-The same list is available while in game too - just press F1 key.
-
-## Dedicated Server and Configuration Files
-
-See
-[SERVER-HOWTO.md](docs/SERVER-HOWTO.md)
-
-## Building NetPanzer
-
-See [BUILD.md](BUILD.md)
-
-## Music
-
-Netpanzer doesn't come with own musicfiles yet. However, you can place your
-favourite .mp3, .ogg or .mod files into the sound/music directory and netpanzer
-will play these in random order while you play.
-
-## Contact
-
-* [Discord](https://discord.gg/kCAB2CMswd)
-
-It's important to remember that any discussions about bugs or desired features
-in a chat room usually scroll away and become forgotten, so it's best to
-create a ticket or discussion on GitHub (mentioned above) if you really want a
-bug fix or new feature.
-
-* [NetPanzer Discussions](https://github.com/netpanzer/netpanzer/discussions) on GitHub
-* [Issues/Bug Tracker](https://github.com/netpanzer/netpanzer/issues)
-
-### Unofficial
-
-These areas are not moderated or maintained by the NetPanzer team. If looking
-for information about the game, always be sure to verify with *official*
-sources.
-
-* [NetPanzer on Instagram](https://www.instagram.com/netpanzer/)
-* [ChatPanzer on WhatsApp](https://chat.whatsapp.com/8CJHyZAzc4XKgbm4CkVpWJ)
-* [Reddit](https://www.reddit.com/r/netpanzer)
+NetPanzer is free software distributed under the GNU General Public License
+version 2 or later. See [COPYING.txt](COPYING.txt) for the full licence.
