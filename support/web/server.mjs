@@ -44,6 +44,15 @@ function stop() {
 }
 const contentTypes = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.wasm': 'application/wasm', '.data': 'application/octet-stream' };
 const files = new Set(['index.html', 'launcher.js', 'netpanzer.js', 'netpanzer.wasm', 'netpanzer.data']);
+function acceptsGzip(header = '') {
+  return header.split(',').some(value => {
+    const [encoding, ...parameters] = value.trim().toLowerCase().split(';');
+    if (!['gzip', '*'].includes(encoding)) return false;
+    const quality = parameters.map(parameter => parameter.trim())
+      .find(parameter => parameter.startsWith('q='));
+    return !quality || Number(quality.slice(2)) > 0;
+  });
+}
 const server = http.createServer(async (req, res) => {
   const name = new URL(req.url, 'http://localhost').pathname.slice(1) || 'index.html';
   if (name === 'servers' && req.method === 'GET') {
@@ -56,9 +65,34 @@ const server = http.createServer(async (req, res) => {
   }
   if (!files.has(name) || !['GET', 'HEAD'].includes(req.method)) { res.writeHead(404).end(); return; }
   try {
-    const filename = path.join(values.dir, name);
-    const info = await stat(filename);
-    res.writeHead(200, { 'Content-Type': contentTypes[path.extname(name)], 'Content-Length': info.size, 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
+    const original = path.join(values.dir, name);
+    let filename = original;
+    let info;
+    let compressed = false;
+    if (acceptsGzip(req.headers['accept-encoding'])) {
+      try {
+        filename = original + '.gz';
+        info = await stat(filename);
+        compressed = true;
+      } catch { filename = original; }
+    }
+    info ||= await stat(filename);
+    const etag = `W/"${info.ino.toString(16)}-${info.size.toString(16)}-${Math.trunc(info.mtimeMs).toString(16)}"`;
+    const headers = {
+      'Content-Type': contentTypes[path.extname(name)],
+      'Content-Length': info.size,
+      'Cache-Control': 'public, max-age=0, must-revalidate',
+      'ETag': etag,
+      'Vary': 'Accept-Encoding',
+      'X-Content-Type-Options': 'nosniff',
+      ...(compressed ? { 'Content-Encoding': 'gzip' } : {}),
+    };
+    if (req.headers['if-none-match'] === etag) {
+      delete headers['Content-Length'];
+      res.writeHead(304, headers).end();
+      return;
+    }
+    res.writeHead(200, headers);
     if (req.method === 'HEAD') res.end();
     else createReadStream(filename).on('error', () => res.destroy()).pipe(res);
   } catch { res.writeHead(404).end(); }

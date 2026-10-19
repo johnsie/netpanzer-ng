@@ -59,6 +59,12 @@ processes. Profiles and logs are isolated in a printed temporary directory;
 your desktop configuration is untouched. The `NETPANZER_USERDIR` environment
 variable selects a profile's parent directory.
 
+Packaged releases include precompressed `.gz` copies of the client assets.
+When the browser advertises gzip support, the runner serves those files with
+the correct `Content-Encoding`; the 127 MB data bundle is about 42 MB over the
+network. ETags let returning players revalidate unchanged assets without
+downloading them again.
+
 Options:
 
 - `--bots 0` disables bots (0–6 allowed).
