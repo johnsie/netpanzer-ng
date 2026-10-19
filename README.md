@@ -1,8 +1,13 @@
-# NetPanzer on Outiva
+# NetPanzer NG
 
 **Fast multiplayer tank warfare, playable in your browser.**
 
-[Play NetPanzer](https://netpanzer.outiva.com)
+[Play NetPanzer NG](https://netpanzer.outiva.com)
+
+> **NetPanzer NG is a personal fork of
+> [NetPanzer](https://github.com/netpanzer/netpanzer).** It is an independent
+> Outiva project and is not an official release from the upstream NetPanzer
+> team.
 
 ## What is NetPanzer?
 
@@ -44,14 +49,17 @@ forces without allowing yourself to be surrounded.
 NetPanzer rewards awareness and momentum. Keep your units together, watch the
 minimap, capture useful positions and keep moving.
 
-## A community game
+## A community game and a personal fork
 
 NetPanzer began as a commercial game from PyroSoft in the late 1990s. Its source
 was later released under the GNU General Public License, allowing a community of
 players and developers to preserve and improve it for more than two decades.
 
-This repository brings that game to Outiva with a streamlined browser
-experience while keeping it compatible with NetPanzer's open-source heritage.
+NetPanzer NG is my personal fork of that community project. It brings the game
+to Outiva with a streamlined browser experience while keeping NetPanzer's
+open-source heritage. Changes and releases in this repository belong to the
+NetPanzer NG fork and should not be presented as official upstream NetPanzer
+releases.
 
 ## Project information
 

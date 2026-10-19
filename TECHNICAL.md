@@ -1,7 +1,11 @@
-# NetPanzer technical details
+# NetPanzer NG technical details
 
 This document is the starting point for developers and server operators. The
 main [README](README.md) is intentionally written for players.
+
+NetPanzer NG is a personal, independently maintained fork of the upstream
+[NetPanzer project](https://github.com/netpanzer/netpanzer). It is developed for
+Outiva and is not an official upstream NetPanzer release.
 
 ## Project layout
 
