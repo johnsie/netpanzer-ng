@@ -23,10 +23,9 @@ let resizeTimer = 0;
 function browserGameSize() {
   const width = window.innerWidth;
   const height = window.innerHeight;
-  // Keep the viewport aspect ratio, but avoid making very large displays render
-  // more pixels than a 1080p game. CSS scales that surface to the exact viewport.
-  let scale = Math.min(1, 1920 / width, 1080 / height);
-  scale = Math.max(scale, 800 / width, 600 / height);
+  // Keep the viewport aspect ratio while retaining the game's native minimum
+  // height. CSS scales this lighter surface to the exact viewport dimensions.
+  const scale = Math.max(800 / width, 600 / height);
   return [Math.round(width * scale), Math.round(height * scale)];
 }
 

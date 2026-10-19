@@ -59,7 +59,12 @@ test('loads the real game, connects, renders and responds to input', async ({ pa
   expect(offeredServerIDs).toContain(new URL((await connection).url()).searchParams.get('server'));
   const canvas = page.locator('canvas');
   let rect = await canvas.boundingBox();
-  const point = (x, y) => [rect.x + x * rect.width / 800, rect.y + y * rect.height / 600];
+  let renderSize = await canvas.evaluate(c => [c.width, c.height]);
+  const point = (x, y) => [rect.x + x * rect.width / renderSize[0], rect.y + y * rect.height / renderSize[1]];
+  const centeredPoint = (x, y) => point(
+    x + (renderSize[0] - 800) / 2,
+    y + (renderSize[1] - 600) / 2,
+  );
   await expect.poll(() => received, { timeout: 40000 }).toBeGreaterThan(20);
   await expect.poll(() => sent, { timeout: 40000 }).toBeGreaterThan(5);
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'playing', { timeout: 40000 });
@@ -74,16 +79,18 @@ test('loads the real game, connects, renders and responds to input', async ({ pa
   await page.getByRole('button', { name: 'Fullscreen' }).click();
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
   rect = await canvas.boundingBox();
+  renderSize = await canvas.evaluate(c => [c.width, c.height]);
   // Intentionally quick clicks: both edges may arrive within one RAF frame.
-  await page.mouse.click(...point(400, 134));
+  await page.mouse.click(...centeredPoint(400, 134));
   await expect.poll(() => styles).toBeGreaterThan(0);
-  await page.mouse.click(...point(175, 100));
+  await page.mouse.click(...centeredPoint(175, 100));
   await expect.poll(() => flags).toBeGreaterThan(0);
   await expect.poll(() => spawned, { timeout: 15000 }).toBeGreaterThan(0);
   await page.evaluate(() => document.exitFullscreen());
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(false);
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   rect = await canvas.boundingBox();
+  renderSize = await canvas.evaluate(c => [c.width, c.height]);
   const dimensions = await canvas.evaluate(c => [c.width, c.height]);
   await page.keyboard.press('Alt+Enter');
   await page.keyboard.press('F9');
