@@ -79,6 +79,29 @@ and Apache definitions. Existing `server.cfg` and `servers.json` files are
 preserved. It deliberately does not start services or enable the Apache site,
 so a missing certificate cannot disrupt the existing web server.
 
+After the one-time host installation, routine releases do not need full root
+access. Give the deployment account group write access to `/srv/netpanzer`,
+and allow only this exact service restart through sudo:
+
+```sudoers
+netpanzer-deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart netpanzer-game.service netpanzer-web.service
+```
+
+Future releases can then be built and activated with:
+
+```sh
+source /opt/emsdk/emsdk_env.sh
+cd /opt/netpanzer-ng
+git pull --ff-only origin main
+deploy/outiva/build-native-release.sh
+deploy/outiva/activate-release.sh \
+  dist-web/netpanzer-web-$(git rev-parse HEAD).tar.gz
+```
+
+The activator validates the archive and manifest, switches the browser release
+atomically, and restarts only the two unprivileged NetPanzer services. If the
+restart fails, it restores the previous browser release.
+
 ## Apache modules
 
 On Debian or Ubuntu:
