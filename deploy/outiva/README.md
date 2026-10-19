@@ -48,6 +48,37 @@ NetPanzer clients should be able to join the Outiva server directly.
 The browser release directory must contain `index.html`, `launcher.js`,
 `netpanzer.js`, `netpanzer.wasm`, and `netpanzer.data`.
 
+## Native build and installation
+
+Use a checkout at `/opt/netpanzer-ng`. Install the Debian/Ubuntu build tools,
+Node.js 22, and activate the pinned Emscripten SDK described in
+`support/web/README.md`. Then build both native and browser artifacts as the
+normal deployment user:
+
+```sh
+cd /opt/netpanzer-ng
+deploy/outiva/build-native-release.sh
+```
+
+The build script refuses to package tracked local changes, builds the native
+server, installs the locked production Node dependency, builds WebAssembly,
+and creates a checksummed archive in `dist-web/`. It does not require or use
+Docker.
+
+Install the result as root, supplying the generated archive:
+
+```sh
+sudo deploy/outiva/install-host.sh \
+  dist-web/netpanzer-web-<full-commit-sha>.tar.gz
+```
+
+The installer verifies the SHA-256 sidecar, validates the archive layout,
+creates the unprivileged `netpanzer` account, installs an immutable browser
+release, switches `/srv/netpanzer/current` atomically, and installs the service
+and Apache definitions. Existing `server.cfg` and `servers.json` files are
+preserved. It deliberately does not start services or enable the Apache site,
+so a missing certificate cannot disrupt the existing web server.
+
 ## Apache modules
 
 On Debian or Ubuntu:
@@ -59,6 +90,7 @@ sudo a2enmod ssl proxy proxy_http proxy_wstunnel headers mime
 Install the vhost, enable it, and validate Apache before reloading:
 
 ```sh
+sudo a2ensite netpanzer.outiva.com
 sudo apachectl configtest
 sudo systemctl reload apache2
 ```
@@ -67,14 +99,32 @@ The origin certificate may be self-signed if HAProxy is configured to trust
 its CA or to skip verification for this private backend. Using a private CA is
 preferable where one is available.
 
+For the stated private HAProxy-to-origin setup, this helper creates a
+self-signed certificate with both the hostname and `192.168.10.181` in its
+subject alternative names. It refuses to overwrite an existing certificate:
+
+```sh
+sudo deploy/outiva/create-origin-certificate.sh
+```
+
 ## Service order
 
 1. Build and install the native server and browser release from the same commit.
-2. Install the server configuration and `servers.json`.
+2. Put the origin certificate and key at the paths above.
 3. Start `netpanzer-game.service` and confirm TCP/UDP status on port 3030.
 4. Start `netpanzer-web.service` and check `http://127.0.0.1:8080/servers`.
-5. Enable the Apache vhost.
+5. Enable and validate the Apache vhost.
 6. Test `https://netpanzer.outiva.com/` and an actual game connection through HAProxy.
+
+```sh
+sudo systemctl enable --now netpanzer-game.service
+sudo systemctl enable --now netpanzer-web.service
+curl --fail http://127.0.0.1:8080/servers
+sudo a2enmod ssl proxy proxy_http proxy_wstunnel headers mime
+sudo a2ensite netpanzer.outiva.com
+sudo apachectl configtest
+sudo systemctl reload apache2
+```
 
 The services bind to loopback by default. Keep firewall rules in place so the
 origin remains reachable only through the intended HAProxy path.

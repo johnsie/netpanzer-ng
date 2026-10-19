@@ -10,7 +10,7 @@ import re
 import tarfile
 
 
-def package(build, output, revision):
+def package(build, output, revision, source_url):
     if not re.fullmatch(r'[0-9a-f]{40}', revision):
         raise ValueError('revision must be the full source commit SHA')
     root = Path(__file__).resolve().parents[2]
@@ -21,7 +21,7 @@ def package(build, output, revision):
         files['client/' + name + '.gz'] = gzip.compress(data, compresslevel=6, mtime=0)
     files['client/COPYING.txt'] = (root / 'COPYING.txt').read_bytes()
     manifest = {'schema': 1, 'release': revision,
-                'source_url': f'https://github.com/netpanzer/netpanzer/tree/{revision}',
+                'source_url': source_url.rstrip('/') + f'/tree/{revision}',
                 'files': {name: {'size': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
                           for name, data in files.items()}}
     files['manifest.json'] = json.dumps(manifest, sort_keys=True, indent=2).encode() + b'\n'
@@ -43,5 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--build', type=Path, default=Path('build-web'))
     parser.add_argument('--output', type=Path, default=Path('dist-web'))
     parser.add_argument('--revision', required=True)
+    parser.add_argument('--source-url', default='https://github.com/johnsie/netpanzer-ng',
+                        help='public source repository recorded in manifest.json')
     args = parser.parse_args()
-    package(args.build, args.output, args.revision)
+    package(args.build, args.output, args.revision, args.source_url)
