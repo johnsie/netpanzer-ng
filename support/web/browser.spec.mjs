@@ -49,6 +49,7 @@ test('loads the real game, connects, renders and responds to input', async ({ pa
     }));
   });
   await page.goto('/');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(page.getByRole('button', { name: 'Play NetPanzer' })).toBeEnabled({ timeout: 60000 });
   await page.locator('#player-name').fill('Browser Player');
   const connection = page.waitForEvent('websocket');
@@ -60,6 +61,9 @@ test('loads the real game, connects, renders and responds to input', async ({ pa
   await expect.poll(() => received, { timeout: 40000 }).toBeGreaterThan(20);
   await expect.poll(() => sent, { timeout: 40000 }).toBeGreaterThan(5);
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'playing', { timeout: 40000 });
+  const viewport = page.viewportSize();
+  rect = await canvas.boundingBox();
+  expect(Math.max(rect.width / viewport.width, rect.height / viewport.height)).toBeGreaterThan(0.95);
   await page.getByRole('button', { name: 'Fullscreen' }).click();
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
   rect = await canvas.boundingBox();

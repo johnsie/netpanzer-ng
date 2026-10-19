@@ -3,6 +3,8 @@ const canvas = document.getElementById('canvas');
 const statusLabel = document.getElementById('status');
 const playButton = document.getElementById('play');
 const playerName = document.getElementById('player-name');
+const progress = document.querySelector('.progress');
+const progressFill = document.getElementById('progress-fill');
 // Versioned assets can live separately from the stable, same-origin gateway.
 const launchOptions = new URLSearchParams(location.search);
 const networkBase = new URL(launchOptions.get('network') || './', location.href);
@@ -16,6 +18,28 @@ let serverRequest = 0;
 let selectedServer = null;
 let runtimeReady = false;
 let clientProtocol = -1;
+
+function setProgress(value) {
+  const percent = Math.round(Math.max(0, Math.min(1, value)) * 100);
+  progressFill.style.width = `${percent}%`;
+  progress.setAttribute('aria-valuenow', String(percent));
+}
+
+function setLoadingStatus(text) {
+  const match = text.match(/^(.*?)\s*\((\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)\)/);
+  if (!match) {
+    statusLabel.textContent = text;
+    return;
+  }
+  const loaded = Number(match[2]);
+  const total = Number(match[3]);
+  const action = match[1].replace(/\.+$/, '').trim();
+  const megabytes = bytes => (bytes / 1048576).toFixed(1);
+  statusLabel.textContent = /download/i.test(action) && total > 100000
+    ? `Downloading game data — ${megabytes(loaded)} of ${megabytes(total)} MB`
+    : `${action} — ${Math.round(loaded / total * 100)}%`;
+  if (total > 0) setProgress(loaded / total);
+}
 
 const storedName = localStorage.getItem('netpanzer.playerName');
 playerName.value = storedName || `Player${Math.floor(1000 + Math.random() * 9000)}`;
@@ -61,6 +85,7 @@ async function prepareMatch() {
     selectedServer = chooseServer(offeredServers);
     if (!selectedServer) throw new Error('No battlefield is currently available');
     statusLabel.textContent = `${selectedServer.name} is ready.`;
+    setProgress(1);
     playButton.textContent = 'Play NetPanzer';
     updatePlayState();
   } catch (error) {
@@ -80,20 +105,26 @@ var Module = {
   websocket: { url: gateway.href, subprotocol: 'binary' },
   print: (...args) => console.log(...args),
   printErr: (...args) => console.error(...args),
-  setStatus: text => { if (!started && text) statusLabel.textContent = text; },
+  setStatus: text => { if (!started && text) setLoadingStatus(text); },
   onRuntimeInitialized() {
     runtimeReady = true;
     clientProtocol = Module.ccall('netpanzer_web_protocol', 'number', [], []);
     playerName.disabled = false;
+    statusLabel.textContent = 'Locating the best Outiva battlefield…';
+    setProgress(1);
     prepareMatch();
   },
   onAbort(reason) {
+    document.body.classList.remove('game-running', 'game-launching');
     statusLabel.textContent = `Unable to run the game: ${reason}. Reload to retry.`;
     playButton.disabled = true;
   },
   onGameStatus(text, state) {
     statusLabel.textContent = text;
     statusLabel.dataset.state = state;
+    if (state === 'playing') document.body.classList.add('game-running');
+    if (['error', 'disconnected'].includes(state))
+      document.body.classList.remove('game-running', 'game-launching');
   },
   async refreshGameServers(request) {
     serverRequest = request;
@@ -140,6 +171,7 @@ var Module = {
   },
   onGameExit() {
     serverRequest = 0;
+    document.body.classList.remove('game-running', 'game-launching');
     if (!['error', 'disconnected'].includes(statusLabel.dataset.state))
       statusLabel.textContent = 'Session ended.';
     playButton.textContent = 'Play again';
@@ -171,6 +203,7 @@ playButton.onclick = () => {
     return;
   }
   started = true;
+  document.body.classList.add('game-launching');
   localStorage.setItem('netpanzer.playerName', name);
   playButton.disabled = true;
   playButton.textContent = 'Playing';
@@ -192,4 +225,9 @@ document.getElementById('fullscreen').onclick = async () => {
     canvas.focus({ preventScroll: true });
   } catch (error) { statusLabel.textContent = `Fullscreen unavailable: ${error.message}`; }
 };
+document.addEventListener('fullscreenchange', () => {
+  const fullscreenButton = document.getElementById('fullscreen');
+  fullscreenButton.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen ↗';
+  fullscreenButton.setAttribute('aria-label', document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen');
+});
 window.addEventListener('error', event => Module.onAbort(event.message || 'Download failed'));
