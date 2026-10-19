@@ -181,6 +181,9 @@ BaseGameManager* initialise(int argc, char** argv) {
   option<std::string, true, false> connect_option(
       'c', "connect", "Connect to the specified netpanzer server", "");
   commandline.add(&connect_option);
+  option<std::string, true, false> player_name_option(
+      '\0', "player_name", "Set the player name", "");
+  commandline.add(&player_name_option);
   bool_option dedicated_option('d', "dedicated", "Run as dedicated server",
                                false);
   commandline.add(&dedicated_option);
@@ -328,6 +331,9 @@ BaseGameManager* initialise(int argc, char** argv) {
     manager->initialize(game_config_option.value());
 
     // gameconfig exists now...
+    if (!player_name_option.value().empty()) {
+      *GameConfig::player_name = player_name_option.value().substr(0, 20);
+    }
     if (!connect_option.value().empty()) {
       std::string connecthost = connect_option.value();
       if (connecthost.find("netpanzer://") == 0) {
@@ -368,6 +374,10 @@ BaseGameManager* initialise(int argc, char** argv) {
 }
 
 #ifdef __EMSCRIPTEN__
+extern "C" EMSCRIPTEN_KEEPALIVE int netpanzer_web_protocol() {
+  return NETPANZER_PROTOCOL_VERSION;
+}
+
 static void browserFrame(void* context) {
   auto* manager = static_cast<BaseGameManager*>(context);
   try {

@@ -1,6 +1,18 @@
 import net from 'node:net';
 import { WebSocketServer, createWebSocketStream } from 'ws';
 
+// Trust X-Forwarded-For only when the immediate peer is the loopback reverse
+// proxy. HAProxy must replace (not append to) the public-facing header before
+// forwarding to Apache.
+export function loopbackProxyClientIP(request) {
+  const remote = request.socket.remoteAddress;
+  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(remote)) return remote;
+  const header = Array.isArray(request.headers['x-forwarded-for'])
+    ? request.headers['x-forwarded-for'][0] : request.headers['x-forwarded-for'];
+  const forwarded = header?.split(',')[0].trim();
+  return forwarded && net.isIP(forwarded) ? forwarded : remote;
+}
+
 // Only deployment-controlled targets may be selected. Never accept a raw host
 // or port from a browser: that would turn this into an arbitrary TCP proxy.
 export function attachGateway(server, { host = '127.0.0.1', port = 3030,

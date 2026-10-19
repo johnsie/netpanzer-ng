@@ -4,7 +4,16 @@ import http from 'node:http';
 import net from 'node:net';
 import { once } from 'node:events';
 import { WebSocket } from 'ws';
-import { attachGateway } from './gateway.mjs';
+import { attachGateway, loopbackProxyClientIP } from './gateway.mjs';
+
+test('proxy client identity trusts forwarded addresses only from loopback', () => {
+  assert.equal(loopbackProxyClientIP({ socket: { remoteAddress: '127.0.0.1' },
+    headers: { 'x-forwarded-for': '203.0.113.8, 192.0.2.1' } }), '203.0.113.8');
+  assert.equal(loopbackProxyClientIP({ socket: { remoteAddress: '192.0.2.5' },
+    headers: { 'x-forwarded-for': '203.0.113.8' } }), '192.0.2.5');
+  assert.equal(loopbackProxyClientIP({ socket: { remoteAddress: '::1' },
+    headers: { 'x-forwarded-for': 'not-an-ip' } }), '::1');
+});
 
 async function fixture(t, { echo = true } = {}) {
   const tcp = net.createServer(socket => { if (echo) socket.pipe(socket); else socket.end(); });

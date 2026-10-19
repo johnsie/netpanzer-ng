@@ -50,27 +50,13 @@ test('loads the real game, connects, renders and responds to input', async ({ pa
   });
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Play NetPanzer' })).toBeEnabled({ timeout: 60000 });
+  await page.locator('#player-name').fill('Browser Player');
+  const connection = page.waitForEvent('websocket');
   await page.getByRole('button', { name: 'Play NetPanzer' }).click();
+  expect(new URL((await connection).url()).searchParams.get('server')).toBe('default');
   const canvas = page.locator('canvas');
   let rect = await canvas.boundingBox();
   const point = (x, y) => [rect.x + x * rect.width / 800, rect.y + y * rect.height / 600];
-  await expect(page.locator('#status')).toHaveAttribute('data-state', 'menu');
-  await page.waitForTimeout(300);
-  expect(received).toBe(0);  // Opening the game must not auto-join.
-  await canvas.screenshot({ path: testInfo.outputPath('main-menu.png') });
-  await page.mouse.click(...point(235, 63));  // Options, where Host used to be.
-  await page.waitForTimeout(200);
-  await canvas.screenshot({ path: testInfo.outputPath('options.png') });
-  const serversResponse = page.waitForResponse(response => response.url().endsWith('/servers'));
-  await page.mouse.click(...point(160, 63));  // Join.
-  const servers = await (await serversResponse).json();
-  await expect(page.locator('#status')).toContainText('Choose a server, enter');
-  expect(servers.length).toBeGreaterThan(0);
-  await page.mouse.click(...point(240, 324));  // Select the first real server.
-  await canvas.screenshot({ path: testInfo.outputPath('server-list.png') });
-  const connection = page.waitForEvent('websocket');
-  await page.mouse.click(...point(688, 563));  // In-game Play button.
-  expect(new URL((await connection).url()).searchParams.get('server')).toBe(servers[0].id);
   await expect.poll(() => received, { timeout: 40000 }).toBeGreaterThan(20);
   await expect.poll(() => sent, { timeout: 40000 }).toBeGreaterThan(5);
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'playing', { timeout: 40000 });
@@ -118,50 +104,30 @@ test('loads the real game, connects, renders and responds to input', async ({ pa
   const after = await canvas.screenshot();
   expect(before.equals(after)).toBe(false);
   await page.screenshot({ path: testInfo.outputPath('battlefield.png'), fullPage: true });
-  // Resign back to the usual menu and reconnect in the same Wasm instance.
+  // Quick-connect sessions exit cleanly through the in-game menu.
   await page.keyboard.press('Escape');
   await page.waitForTimeout(200);
-  await page.mouse.click(...point(245, 63));
-  await page.waitForTimeout(200);
-  await canvas.screenshot({ path: testInfo.outputPath('resign.png') });
-  await page.mouse.click(...point(320, 340));
-  await expect(page.locator('#status')).toHaveAttribute('data-state', 'menu');
-  await page.mouse.click(...point(160, 63));
-  await expect(page.locator('#status')).toContainText('Choose a server, enter');
-  await page.mouse.click(...point(240, 324));
-  const reconnect = page.waitForEvent('websocket');
-  await page.mouse.click(...point(688, 563));
-  await reconnect;
-  await expect(page.locator('#status')).toHaveAttribute('data-state', 'playing', { timeout: 40000 });
+  await canvas.screenshot({ path: testInfo.outputPath('game-menu.png') });
   await testInfo.attach('browser-log', { body: messages.join('\n'), contentType: 'text/plain' });
   expect(errors).toEqual([]);
   await expect(page.locator('#status')).not.toContainText('Unable');
 });
 
-test('server-list failures can be retried and unapproved addresses stay in the menu', async ({ page }, testInfo) => {
+test('matchmaking failures can be retried without exposing server addresses', async ({ page }, testInfo) => {
   let connections = 0, fail = true;
   const errors = [];
   page.on('websocket', () => connections++);
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/servers', route => fail ? route.fulfill({ status: 503, body: '' }) : route.continue());
   await page.goto('/');
-  await page.getByRole('button', { name: 'Play NetPanzer' }).click({ timeout: 60000 });
-  const rect = await page.locator('canvas').boundingBox();
-  const point = (x, y) => [rect.x + x * rect.width / 800, rect.y + y * rect.height / 600];
-  await page.mouse.click(...point(160, 63));
-  await expect(page.locator('#status')).toContainText('Server list unavailable');
-  fail = false;
-  await page.mouse.click(...point(665, 520));
-  await expect(page.locator('#status')).toContainText('Choose a server, enter');
-  await page.mouse.click(...point(180, 177));
-  await page.keyboard.type('unapproved.invalid:3030', { delay: 25 });
-  await page.mouse.click(...point(688, 563));
-  await expect(page.locator('#status')).toContainText('Other addresses are not supported');
+  await expect(page.getByRole('button', { name: 'Retry' })).toBeEnabled({ timeout: 60000 });
+  await expect(page.locator('#status')).toContainText('Matchmaking is unavailable');
   expect(connections).toBe(0);
-  await page.screenshot({ path: testInfo.outputPath('invalid-server.png') });
-  // Selecting a row replaces the invalid text and restores a valid destination.
-  await page.mouse.click(...point(240, 324));
-  await page.mouse.click(...point(688, 563));
+  fail = false;
+  await page.getByRole('button', { name: 'Retry' }).click();
+  await expect(page.getByRole('button', { name: 'Play NetPanzer' })).toBeEnabled();
+  await page.screenshot({ path: testInfo.outputPath('matchmaking-ready.png') });
+  await page.getByRole('button', { name: 'Play NetPanzer' }).click();
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'playing', { timeout: 40000 });
   expect(connections).toBe(1);
   expect(errors).toEqual([]);

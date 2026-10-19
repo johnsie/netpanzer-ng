@@ -2,6 +2,7 @@
 const canvas = document.getElementById('canvas');
 const statusLabel = document.getElementById('status');
 const playButton = document.getElementById('play');
+const playerName = document.getElementById('player-name');
 // Versioned assets can live separately from the stable, same-origin gateway.
 const launchOptions = new URLSearchParams(location.search);
 const networkBase = new URL(launchOptions.get('network') || './', location.href);
@@ -12,6 +13,68 @@ gateway.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
 let started = false;
 let offeredServers = [];
 let serverRequest = 0;
+let selectedServer = null;
+let runtimeReady = false;
+let clientProtocol = -1;
+
+const storedName = localStorage.getItem('netpanzer.playerName');
+playerName.value = storedName || `Player${Math.floor(1000 + Math.random() * 9000)}`;
+
+function validPlayerName() {
+  return /^[A-Za-z0-9 _-]{1,20}$/.test(playerName.value.trim());
+}
+
+function updatePlayState() {
+  if (!runtimeReady || started) return;
+  const valid = validPlayerName();
+  playerName.setAttribute('aria-invalid', String(!valid));
+  playButton.disabled = !valid || !selectedServer;
+}
+
+function chooseServer(servers) {
+  const candidates = servers.filter(server => server.running && !server.password && !server.auth &&
+    (server.protocol < 0 || server.protocol === clientProtocol) &&
+    (server.maxplayers < 0 || server.players < server.maxplayers));
+  candidates.sort((a, b) => {
+    const aPopulated = a.players > 0 ? 1 : 0;
+    const bPopulated = b.players > 0 ? 1 : 0;
+    if (aPopulated !== bPopulated) return bPopulated - aPopulated;
+    const aPlayers = a.players < 0 ? 0 : a.players;
+    const bPlayers = b.players < 0 ? 0 : b.players;
+    if (aPlayers !== bPlayers) return bPlayers - aPlayers;
+    const aPing = a.ping < 0 ? Number.MAX_SAFE_INTEGER : a.ping;
+    const bPing = b.ping < 0 ? Number.MAX_SAFE_INTEGER : b.ping;
+    return aPing - bPing || a.id.localeCompare(b.id);
+  });
+  return candidates[0] || null;
+}
+
+async function prepareMatch() {
+  selectedServer = null;
+  playButton.disabled = true;
+  playButton.textContent = 'Finding match…';
+  statusLabel.textContent = 'Finding an available Outiva battlefield…';
+  try {
+    const response = await fetch(new URL('servers', networkBase), { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) throw new Error('Matchmaking is unavailable');
+    offeredServers = await response.json();
+    selectedServer = chooseServer(offeredServers);
+    if (!selectedServer) throw new Error('No battlefield is currently available');
+    statusLabel.textContent = `${selectedServer.name} is ready.`;
+    playButton.textContent = 'Play NetPanzer';
+    updatePlayState();
+  } catch (error) {
+    statusLabel.textContent = `${error.message}. Click Retry.`;
+    playButton.textContent = 'Retry';
+    playButton.disabled = false;
+  }
+}
+
+playerName.addEventListener('input', updatePlayState);
+playerName.addEventListener('change', () => {
+  const name = playerName.value.trim();
+  if (validPlayerName()) localStorage.setItem('netpanzer.playerName', name);
+});
 var Module = {
   canvas,
   websocket: { url: gateway.href, subprotocol: 'binary' },
@@ -19,9 +82,10 @@ var Module = {
   printErr: (...args) => console.error(...args),
   setStatus: text => { if (!started && text) statusLabel.textContent = text; },
   onRuntimeInitialized() {
-    statusLabel.textContent = 'Ready. Open the game, then choose Join and a server.';
-    playButton.textContent = 'Play NetPanzer';
-    playButton.disabled = false;
+    runtimeReady = true;
+    clientProtocol = Module.ccall('netpanzer_web_protocol', 'number', [], []);
+    playerName.disabled = false;
+    prepareMatch();
   },
   onAbort(reason) {
     statusLabel.textContent = `Unable to run the game: ${reason}. Reload to retry.`;
@@ -95,13 +159,28 @@ canvas.addEventListener('keydown', event => {
 });
 playButton.onclick = () => {
   if (started) return;
+  if (!selectedServer) {
+    prepareMatch();
+    return;
+  }
+  const name = playerName.value.trim();
+  if (!validPlayerName()) {
+    statusLabel.textContent = 'Use 1–20 letters, numbers, spaces, underscores, or hyphens.';
+    playerName.focus();
+    updatePlayState();
+    return;
+  }
   started = true;
+  localStorage.setItem('netpanzer.playerName', name);
   playButton.disabled = true;
   playButton.textContent = 'Playing';
-  Module.onGameStatus('Choose Join to select a server. Hosting is unavailable in the browser.', 'menu');
+  const address = `${selectedServer.host}:${selectedServer.port}`;
+  gateway.search = new URLSearchParams({ server: selectedServer.id }).toString();
+  Module.websocket.url = gateway.href;
+  Module.onGameStatus(`Connecting to ${selectedServer.name}…`, 'connecting');
   canvas.focus({ preventScroll: true });
   try {
-    Module.callMain(['--master_server=none']);
+    Module.callMain(['--master_server=none', `--connect=${address}`, `--player_name=${name}`]);
   } catch (error) {
     Module.onAbort(error.message || error);
   }

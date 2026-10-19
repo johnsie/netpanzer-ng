@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { parseArgs } from 'node:util';
-import { attachGateway } from './gateway.mjs';
+import { attachGateway, loopbackProxyClientIP } from './gateway.mjs';
 import { validateServers, createServerCatalog } from './servers.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -21,6 +21,7 @@ const { values } = parseArgs({ options: {
   'game-host': { type: 'string', default: '127.0.0.1' },
   origin: { type: 'string' },
   servers: { type: 'string' },
+  'trust-proxy': { type: 'boolean', default: false },
 } });
 const webPort = Number(values.port), gamePort = Number(values['game-port']), bots = Number(values.bots);
 if (![webPort, gamePort].every(p => Number.isInteger(p) && p > 0 && p < 65536) || !Number.isInteger(bots) || bots < 0 || bots > 6) {
@@ -62,7 +63,8 @@ const server = http.createServer(async (req, res) => {
     else createReadStream(filename).on('error', () => res.destroy()).pipe(res);
   } catch { res.writeHead(404).end(); }
 });
-const gateway = attachGateway(server, { targets, origin: values.origin });
+const gateway = attachGateway(server, { targets, origin: values.origin,
+  clientIP: values['trust-proxy'] ? loopbackProxyClientIP : undefined });
 process.on('SIGINT', stop);
 process.on('SIGTERM', stop);
 process.on('exit', () => { for (const child of children) child.kill('SIGTERM'); });

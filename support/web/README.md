@@ -46,9 +46,9 @@ node support/web/server.mjs --native build-web-native/netpanzer
 ```
 
 Open <http://127.0.0.1:8080> in Chrome or Firefox. Wait for the asset download,
-then click **Play NetPanzer** to open the original main menu. Click **Join**,
-enter your player name, select a server from the list, and click the in-game
-**Play** button. Pick a unit style, then a flag to spawn. Drag
+enter a player name, and click **Play NetPanzer**. The launcher selects an
+available non-password server and connects automatically. Pick a unit style,
+then a flag to spawn. Drag
 with the left mouse button to select tanks; left-click the ground to move or
 an enemy to attack. Right-drag or use arrow keys to scroll the map. F1 opens
 the game's help.
@@ -70,6 +70,9 @@ Options:
   `--game-host 127.0.0.1 --game-port 3030`.
 - `--servers /path/to/servers.json` offers multiple approved servers in the
   game's usual Join screen. See [servers.example.json](servers.example.json).
+- `--trust-proxy` accepts the first `X-Forwarded-For` address only when the
+  immediate connection comes from a loopback reverse proxy. The public proxy
+  must replace untrusted incoming values before forwarding requests.
 
 For example, after starting native servers on ports 3030 and 3031:
 
@@ -82,10 +85,12 @@ The file is read at startup. It can include local or remote native servers;
 the gateway machine must be able to reach them. With `--native`, the file
 must include that local server; the runner still launches only one server.
 
-The browser fetches `/servers` and uses `/game?server=ID` to join the selected
-entry. The gateway rejects unknown IDs and arbitrary destination parameters.
-Manually typed addresses must also match a configured entry. This is an
-operator-managed list, not the desktop public master-server directory.
+The browser fetches `/servers`, selects a healthy server in the background and
+uses `/game?server=ID` to join it. Populated servers are preferred, followed by
+lower gateway-to-server latency. Full, password-protected and authenticated
+servers are excluded from automatic selection. The gateway rejects unknown IDs
+and arbitrary destination parameters. This is an operator-managed list, not the
+desktop public master-server directory.
 
 The gateway queries the usual UDP status service for map, players, protocol,
 password and authentication flags. Ping measures **gateway → game server**,
@@ -96,11 +101,12 @@ If such a private server requires a password, set `"password": true` in its
 entry to enable the original password prompt. Unreachable servers show a
 timeout. Refresh retries the list without reloading the game.
 
-The browser hides **Host**, desktop resolution selection and SDL fullscreen.
+The normal browser flow also bypasses the original server chooser. The browser
+hides **Host**, desktop resolution selection and SDL fullscreen.
 Use the page's Fullscreen button and resize the browser instead. Shadows,
-smoke, minimap size, scrolling and audio controls remain available. **Resign**
-returns to the menu for another server selection; **Exit netPanzer** ends the
-client, after which **Play again** reloads it. These restrictions are web-only.
+smoke, minimap size, scrolling and audio controls remain available. A
+quick-connect session exits after resigning or disconnecting, after which
+**Play again** reloads it and requests a fresh match. These restrictions are web-only.
 Desktop Alt+Enter and F9 shortcuts are disabled; use browser fullscreen and
 your browser/OS screenshot tools rather than saving to a temporary virtual file.
 
@@ -173,8 +179,9 @@ imported; add approved destinations to the website's server configuration.
 See [Emscripten networking](https://emscripten.org/docs/porting/networking.html)
 and [SDL's Emscripten notes](https://wiki.libsdl.org/SDL2/README-emscripten).
 
-This first port targets desktop keyboards and mice. Browser settings live in
-the tab's virtual filesystem and reset on reload. Mobile controls, persistent
-settings, automatic public-directory discovery and splitting the initial asset download
-are follow-up work. Preserve the game's and dependencies' license notices and
+This first port targets desktop keyboards and mice. The player name is retained
+in browser storage. Other settings still live in the tab's virtual filesystem
+and reset on reload. Mobile controls, full settings persistence, automatic
+public-directory discovery and splitting the initial asset download are
+follow-up work. Preserve the game's and dependencies' license notices and
 provide the corresponding source when distributing the compiled game.
