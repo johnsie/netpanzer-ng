@@ -71,7 +71,9 @@ if ! id netpanzer >/dev/null 2>&1; then
     --create-home --shell /usr/sbin/nologin netpanzer
 fi
 
-install -d -o netpanzer -g netpanzer -m 0750 /var/lib/netpanzer/.netpanzer/config
+install -d -o netpanzer -g netpanzer -m 0750 \
+  /var/lib/netpanzer/.netpanzer \
+  /var/lib/netpanzer/.netpanzer/config
 install -d -o root -g root -m 0755 /etc/netpanzer /srv/netpanzer/releases
 install -d -o root -g root -m 0750 /etc/ssl/netpanzer.outiva.com
 
