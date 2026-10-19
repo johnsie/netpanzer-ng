@@ -18,6 +18,28 @@ let serverRequest = 0;
 let selectedServer = null;
 let runtimeReady = false;
 let clientProtocol = -1;
+let resizeTimer = 0;
+
+function browserGameSize() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  // Keep the viewport aspect ratio, but avoid making very large displays render
+  // more pixels than a 1080p game. CSS scales that surface to the exact viewport.
+  let scale = Math.min(1, 1920 / width, 1080 / height);
+  scale = Math.max(scale, 800 / width, 600 / height);
+  return [Math.round(width * scale), Math.round(height * scale)];
+}
+
+function resizeGameToViewport() {
+  if (!started) return;
+  const [width, height] = browserGameSize();
+  Module.ccall('netpanzer_web_resize', 'number', ['number', 'number'], [width, height]);
+}
+
+function queueGameResize() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(resizeGameToViewport, 100);
+}
 
 function setProgress(value) {
   const percent = Math.round(Math.max(0, Math.min(1, value)) * 100);
@@ -122,7 +144,10 @@ var Module = {
   onGameStatus(text, state) {
     statusLabel.textContent = text;
     statusLabel.dataset.state = state;
-    if (state === 'playing') document.body.classList.add('game-running');
+    if (state === 'playing') {
+      document.body.classList.add('game-running');
+      requestAnimationFrame(resizeGameToViewport);
+    }
     if (['error', 'disconnected'].includes(state))
       document.body.classList.remove('game-running', 'game-launching');
   },
@@ -214,6 +239,7 @@ playButton.onclick = () => {
   canvas.focus({ preventScroll: true });
   try {
     Module.callMain(['--master_server=none', `--connect=${address}`, `--player_name=${name}`]);
+    resizeGameToViewport();
   } catch (error) {
     Module.onAbort(error.message || error);
   }
@@ -229,5 +255,7 @@ document.addEventListener('fullscreenchange', () => {
   const fullscreenButton = document.getElementById('fullscreen');
   fullscreenButton.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen ↗';
   fullscreenButton.setAttribute('aria-label', document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen');
+  requestAnimationFrame(resizeGameToViewport);
 });
+window.addEventListener('resize', queueGameResize);
 window.addEventListener('error', event => Module.onAbort(event.message || 'Download failed'));

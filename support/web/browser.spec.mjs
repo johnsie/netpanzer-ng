@@ -65,7 +65,12 @@ test('loads the real game, connects, renders and responds to input', async ({ pa
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'playing', { timeout: 40000 });
   const viewport = page.viewportSize();
   rect = await canvas.boundingBox();
-  expect(Math.max(rect.width / viewport.width, rect.height / viewport.height)).toBeGreaterThan(0.95);
+  expect(rect.width / viewport.width).toBeGreaterThan(0.98);
+  expect(rect.height / viewport.height).toBeGreaterThan(0.98);
+  await expect.poll(async () => {
+    const [width, height] = await canvas.evaluate(c => [c.width, c.height]);
+    return width / height;
+  }).toBeCloseTo(viewport.width / viewport.height, 2);
   await page.getByRole('button', { name: 'Fullscreen' }).click();
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
   rect = await canvas.boundingBox();

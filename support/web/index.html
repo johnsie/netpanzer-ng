@@ -53,10 +53,10 @@
   body.game-running .brandbar, body.game-running .briefing, body.game-running footer { opacity: 0; pointer-events: none; }
   body.game-running main { padding: 0; }
   body.game-running .screen { position: fixed; inset: 0; background: #000; }
-  body.game-running canvas { width: min(100vw, calc(100dvh * var(--game-ratio, 1.333333))); max-height: 100dvh; opacity: 1; }
+  body.game-running canvas { width: 100vw; height: 100dvh; max-width: none; max-height: none; opacity: 1; }
   body.game-running #fullscreen, body.game-running .help-panel { opacity: 1; pointer-events: auto; }
   .screen:fullscreen { inset: 0; background: #000; }
-  .screen:fullscreen canvas { width: min(100vw, calc(100dvh * var(--game-ratio, 1.333333))); max-height: 100dvh; opacity: 1; }
+  .screen:fullscreen canvas { width: 100vw; height: 100dvh; max-width: none; max-height: none; opacity: 1; }
   .embedded .brandbar, .embedded footer { display: none; }
   .embedded main { padding: 20px; }
   .embedded .screen { inset: 0; }

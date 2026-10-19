@@ -47,6 +47,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 // #include "Util/Exception.hpp"
 #include "2D/Palette.hpp"
 #include "Core/NetworkGlobals.hpp"
+#include "Classes/ScreenSurface.hpp"
 #include "Interfaces/BaseGameManager.hpp"
 #include "Interfaces/BotGameManager.hpp"
 #include "Interfaces/DedicatedGameManager.hpp"
@@ -376,6 +377,23 @@ BaseGameManager* initialise(int argc, char** argv) {
 #ifdef __EMSCRIPTEN__
 extern "C" EMSCRIPTEN_KEEPALIVE int netpanzer_web_protocol() {
   return NETPANZER_PROTOCOL_VERSION;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int netpanzer_web_resize(int width,
+                                                          int height) {
+  if (!screen || width < 800 || height < 600) return 0;
+  if (screen->getWidth() == width && screen->getHeight() == height) return 1;
+
+  try {
+    GameConfig::video_width = width;
+    GameConfig::video_height = height;
+    GameManager::setVideoMode();
+    return 1;
+  } catch (const std::exception& e) {
+    LOGGER.warning("Could not resize browser game to %dx%d: %s", width, height,
+                   e.what());
+    return 0;
+  }
 }
 
 static void browserFrame(void* context) {
