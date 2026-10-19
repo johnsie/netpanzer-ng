@@ -10,7 +10,7 @@ User=netpanzer
 Group=netpanzer
 WorkingDirectory=/opt/netpanzer-ng
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node support/web/server.mjs --bind=127.0.0.1 --port=8080 --dir=/srv/netpanzer/current/client --servers=/etc/netpanzer/servers.json --origin=https://netpanzer.outiva.com --trust-proxy --bots=0
+ExecStart=/usr/bin/node support/web/server.mjs --bind=127.0.0.1 --port=8080 --dir=/srv/netpanzer/current --servers=/etc/netpanzer/servers.json --origin=https://netpanzer.outiva.com --trust-proxy --bots=0
 Restart=on-failure
 RestartSec=2
 NoNewPrivileges=true

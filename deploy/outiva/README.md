@@ -38,7 +38,7 @@ NetPanzer clients should be able to join the Outiva server directly.
 ```text
 /opt/netpanzer-ng/                    repository checkout
 /opt/netpanzer-ng/build-native/       native build
-/srv/netpanzer/current/client/        browser release files
+/srv/netpanzer/current/               browser release files
 /etc/netpanzer/servers.json           gateway server allowlist
 /var/lib/netpanzer/.netpanzer/config/server.cfg
 /etc/ssl/netpanzer.outiva.com/origin.crt
