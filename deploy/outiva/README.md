@@ -3,26 +3,23 @@
 Production hostname: `netpanzer.outiva.com`
 
 Outiva deployment is deliberately Docker-free. The game and gateway run as
-native systemd services, with Apache as the origin web server.
+native systemd services, with Apache as the origin web server. A reverse proxy
+handles public TLS and forwards HTTPS traffic to Apache. Environment-specific
+addresses and network layout are intentionally not documented here.
 
-HAProxy terminates the public TLS connection and forwards HTTPS to Apache at
-`192.168.10.181`. Apache uses an internal origin certificate, then proxies to
-the NetPanzer web/gateway service on `127.0.0.1:8080`.
-
-HAProxy must replace `X-Forwarded-For` with the connecting player's address
-before sending the request to Apache. The gateway's `--trust-proxy` mode only
-uses that header when its immediate peer is loopback Apache; direct remote
-connections cannot supply their own client identity.
+The reverse proxy must replace `X-Forwarded-For` with the connecting player's
+address before sending the request to Apache. The gateway's `--trust-proxy`
+mode only uses that header when its immediate peer is loopback Apache; direct
+remote connections cannot supply their own client identity.
 
 ```text
-Player -> HTTPS -> HAProxy -> HTTPS -> Apache -> HTTP/WS 127.0.0.1:8080
-                                                   |
-                                                   +-> TCP 127.0.0.1:3030
-                                                       NetPanzer server
+Player -> HTTPS -> Reverse proxy -> HTTPS -> Apache -> NetPanzer gateway
+                                                        |
+                                                        +-> NetPanzer server
 ```
 
-Neither port 8080 nor port 3030 needs to be exposed to the LAN when browser
-players are the only clients. Open TCP and UDP 3030 externally only if native
+The gateway and game-server ports should not be exposed publicly when browser
+players are the only clients. Expose the native game port only if native
 NetPanzer clients should be able to join the Outiva server directly.
 
 ## Files
@@ -118,13 +115,10 @@ sudo apachectl configtest
 sudo systemctl reload apache2
 ```
 
-The origin certificate may be self-signed if HAProxy is configured to trust
-its CA or to skip verification for this private backend. Using a private CA is
-preferable where one is available.
-
-For the stated private HAProxy-to-origin setup, this helper creates a
-self-signed certificate with both the hostname and `192.168.10.181` in its
-subject alternative names. It refuses to overwrite an existing certificate:
+The origin certificate may be self-signed if the reverse proxy is configured
+to trust its CA or to skip verification for the backend. Using a private CA is
+preferable where one is available. This helper creates the origin certificate
+and refuses to overwrite an existing certificate:
 
 ```sh
 sudo deploy/outiva/create-origin-certificate.sh
@@ -137,7 +131,7 @@ sudo deploy/outiva/create-origin-certificate.sh
 3. Start `netpanzer-game.service` and confirm TCP/UDP status on port 3030.
 4. Start `netpanzer-web.service` and check `http://127.0.0.1:8080/servers`.
 5. Enable and validate the Apache vhost.
-6. Test `https://netpanzer.outiva.com/` and an actual game connection through HAProxy.
+6. Test `https://netpanzer.outiva.com/` and an actual game connection through the reverse proxy.
 
 ```sh
 sudo systemctl enable --now netpanzer-game.service
@@ -149,5 +143,5 @@ sudo apachectl configtest
 sudo systemctl reload apache2
 ```
 
-The services bind to loopback by default. Keep firewall rules in place so the
-origin remains reachable only through the intended HAProxy path.
+The services bind to loopback by default. Keep firewall rules in place so they
+remain reachable only through the intended reverse-proxy path.

@@ -59,25 +59,20 @@ The gateway is mandatory. Browsers cannot open raw TCP or UDP connections, so th
 
 Keep the gateway and game server in the same region. Browser-to-gateway latency is player-facing; gateway-to-game-server latency should be almost negligible.
 
-## Confirmed Outiva deployment topology
+## Outiva deployment topology
 
-The public hostname is `netpanzer.outiva.com`. DNS and HAProxy route it to the
-origin server at `192.168.10.181`.
-
-HAProxy owns the public certificate and terminates the public TLS connection.
-The connection from HAProxy to Apache should also use HTTPS, with an internal
-origin certificate installed on `192.168.10.181`. That certificate can be
-self-signed if the HAProxy backend is configured to trust it or explicitly not
-verify it. It is not exposed directly to players.
+The public hostname is `netpanzer.outiva.com`. A reverse proxy handles the
+public TLS connection and forwards traffic to Apache. Environment-specific
+addresses and network layout are intentionally kept outside this repository.
 
 ```text
 Internet
    |
    | HTTPS: netpanzer.outiva.com (public certificate)
    v
-HAProxy
+Reverse proxy
    |
-   | HTTPS to 192.168.10.181:443 (internal origin certificate)
+   | HTTPS
    v
 Apache
    |-- static browser client files
@@ -88,9 +83,9 @@ Apache
 ```
 
 Apache must preserve the original host, forward the public HTTPS scheme, pass
-the `/game` WebSocket upgrade and preserve its query string. Only Apache needs
-to be reachable from HAProxy; the local application/gateway port should listen
-on loopback and should not be exposed on the LAN.
+the `/game` WebSocket upgrade and preserve its query string. The application
+and game services should remain behind the web server rather than being exposed
+directly.
 
 An origin-vhost template is provided at
 [`deploy/outiva/apache/netpanzer.outiva.com.conf`](deploy/outiva/apache/netpanzer.outiva.com.conf).

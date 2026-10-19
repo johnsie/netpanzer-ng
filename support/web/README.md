@@ -71,7 +71,7 @@ Options:
 - `--port 8081` changes the HTTP/WebSocket port.
 - `--game-port 3031` changes the native server's TCP port.
 - `--dir /path/to/build-web` serves a different build.
-- `--bind 0.0.0.0` allows access from another machine for LAN testing.
+- `--bind 0.0.0.0` allows access from another machine for network testing.
 - Omit `--native` to use an existing server; select its fixed address with
   `--game-host 127.0.0.1 --game-port 3030`.
 - `--servers /path/to/servers.json` offers multiple approved servers in the

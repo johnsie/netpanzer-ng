@@ -40,7 +40,8 @@ are in [BUILD.md](BUILD.md). Dedicated server configuration is covered by the
 ## Outiva deployment
 
 The production deployment does not use Docker. NetPanzer runs as native systemd
-services behind Apache, with HAProxy handling the public HTTPS connection.
+services behind Apache, with a reverse proxy handling the public HTTPS
+connection.
 Releases are checksummed, activated atomically and can return to the previous
 browser release if activation fails.
 
