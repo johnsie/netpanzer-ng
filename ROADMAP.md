@@ -129,7 +129,7 @@ Keep the initial Outiva-facing service under `support/web` in the same repositor
 - Player-facing launch page
 - Admin status page
 - Rate limits and connection metrics
-- Container definitions for local development
+- Native local-development scripts and configuration
 
 It can be split into a separate service later or folded into the existing Outiva
 backend if appropriate.
@@ -138,7 +138,7 @@ backend if appropriate.
 
 Keep the initial deployment configuration under `deploy/outiva`:
 
-- Production Compose or Kubernetes files
+- Native systemd service definitions
 - Reverse-proxy configuration
 - Monitoring dashboards
 - Environment-specific server configuration
@@ -259,7 +259,7 @@ Start with one game server and optionally two native bots so a new player does n
 
 Deployment requirements:
 
-- Container or systemd service running `netpanzer -d`
+- Native systemd service running `netpanzer -d`
 - Persistent `server.cfg`
 - Non-root runtime user
 - Automatic restart

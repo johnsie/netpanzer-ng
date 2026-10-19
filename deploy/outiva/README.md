@@ -2,6 +2,9 @@
 
 Production hostname: `netpanzer.outiva.com`
 
+Outiva deployment is deliberately Docker-free. The game and gateway run as
+native systemd services, with Apache as the origin web server.
+
 HAProxy terminates the public TLS connection and forwards HTTPS to Apache at
 `192.168.10.181`. Apache uses an internal origin certificate, then proxies to
 the NetPanzer web/gateway service on `127.0.0.1:8080`.
