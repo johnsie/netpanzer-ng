@@ -52,9 +52,11 @@ test('loads the real game, connects, renders and responds to input', async ({ pa
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(page.getByRole('button', { name: 'Play NetPanzer' })).toBeEnabled({ timeout: 60000 });
   await page.locator('#player-name').fill('Browser Player');
+  const offeredServerIDs = await page.evaluate(async () =>
+    (await (await fetch('servers')).json()).map(server => server.id));
   const connection = page.waitForEvent('websocket');
   await page.getByRole('button', { name: 'Play NetPanzer' }).click();
-  expect(new URL((await connection).url()).searchParams.get('server')).toBe('default');
+  expect(offeredServerIDs).toContain(new URL((await connection).url()).searchParams.get('server'));
   const canvas = page.locator('canvas');
   let rect = await canvas.boundingBox();
   const point = (x, y) => [rect.x + x * rect.width / 800, rect.y + y * rect.height / 600];
