@@ -33,7 +33,11 @@ def package(build, output, revision, source_url):
             info = tarfile.TarInfo(name)
             info.size, info.mode, info.mtime = len(data), 0o644, 0
             tar.addfile(info, io.BytesIO(data))
-    digest = hashlib.file_digest(archive.open('rb'), 'sha256').hexdigest()
+    digest = hashlib.sha256()
+    with archive.open('rb') as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b''):
+            digest.update(chunk)
+    digest = digest.hexdigest()
     archive.with_suffix(archive.suffix + '.sha256').write_text(f'{digest}  {archive.name}\n')
     print(archive)
 
