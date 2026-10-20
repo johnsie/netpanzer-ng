@@ -31,16 +31,18 @@ test('OIDC callback creates a signed NetPanzer session while guests remain anony
   const base = `http://127.0.0.1:${server.address().port}`;
 
   assert.equal((await fetch(`${base}/auth/me`)).status, 204);
-  const login = await fetch(`${base}/auth/login?prompt=none`, { redirect: 'manual' });
+  const login = await fetch(`${base}/auth/login?prompt=none&mode=redirect`, { redirect: 'manual' });
   assert.equal(login.status, 302);
   const authorization = new URL(login.headers.get('location'));
   nonce = authorization.searchParams.get('nonce');
   assert.equal(authorization.searchParams.get('prompt'), 'none');
   assert.equal(authorization.searchParams.get('code_challenge_method'), 'S256');
 
-  const callback = await fetch(`${base}/auth/callback?code=code&state=${authorization.searchParams.get('state')}`);
-  assert.equal(callback.status, 200);
-  assert.match(await callback.text(), /outiva:netpanzer-auth/);
+  const callback = await fetch(`${base}/auth/callback?code=code&state=${authorization.searchParams.get('state')}`, {
+    redirect: 'manual',
+  });
+  assert.equal(callback.status, 302);
+  assert.equal(callback.headers.get('location'), 'https://outiva.example/?netpanzer_sso=complete#/play/netpanzer-ng');
   const cookie = callback.headers.get('set-cookie').split(';')[0];
   assert.match(cookie, /^__Host-netpanzer_session=/);
 
@@ -50,4 +52,14 @@ test('OIDC callback creates a signed NetPanzer session while guests remain anony
     sub: 'user-123', name: 'Test Commander', preferred_username: '', email: 'test@example.com',
   });
   assert.equal((await fetch(`${base}/auth/me`, { headers: { Cookie: `${cookie}tampered` } })).status, 204);
+
+  const guestLogin = await fetch(`${base}/auth/login?prompt=none&mode=redirect`, { redirect: 'manual' });
+  const guestAuthorization = new URL(guestLogin.headers.get('location'));
+  const guestCallback = await fetch(
+    `${base}/auth/callback?error=login_required&state=${guestAuthorization.searchParams.get('state')}`,
+    { redirect: 'manual' },
+  );
+  assert.equal(guestCallback.status, 302);
+  assert.equal(guestCallback.headers.get('location'), 'https://outiva.example/?netpanzer_sso=complete#/play/netpanzer-ng');
+  assert.equal(guestCallback.headers.get('set-cookie'), null);
 });

@@ -153,10 +153,12 @@ remain reachable only through the intended reverse-proxy path.
 NetPanzer remains anonymous by default. A visitor who opens
 `netpanzer.outiva.com` directly is not redirected to Accounts and can choose a
 callsign and play as a guest. When a user already signed in at `outiva.com`
-clicks Play, Outiva opens NetPanzer's authorization endpoint with
-`prompt=none`. Keycloak reuses its existing SSO session, and NetPanzer creates
-its own signed, HttpOnly session cookie. No access token is sent through a URL,
-the parent page, or the game iframe.
+clicks Play, Outiva makes a brief top-level round trip through NetPanzer's
+authorization endpoint with `prompt=none`. Keycloak reuses its existing SSO
+session, NetPanzer creates its own signed, HttpOnly session cookie, and the
+browser returns to the embedded game. A second silent round trip restores
+Outiva's memory-only session after the page navigation. This flow uses no
+popup and sends no access token through a URL or the game iframe.
 
 After installing the updated systemd service, configure Keycloak and generate
 the NetPanzer secrets with:

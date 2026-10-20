@@ -53,6 +53,14 @@ function popupResult(res, parentOrigin, ok) {
 <script>window.opener?.postMessage(${message},${target});window.close();</script>`);
 }
 
+function completeLogin(res, parentOrigin, redirect, ok) {
+  if (redirect) {
+    send(res, 302, { Location: `${parentOrigin}/?netpanzer_sso=complete#/play/netpanzer-ng` });
+    return;
+  }
+  popupResult(res, parentOrigin, ok);
+}
+
 export function createOptionalOidc({ issuer, clientId, clientSecret, sessionSecret,
   origin, parentOrigin = 'https://outiva.com', backchannelUrl = issuer,
   fetchImpl = fetch, now = () => Date.now() }) {
@@ -110,7 +118,10 @@ export function createOptionalOidc({ issuer, clientId, clientSecret, sessionSecr
       const state = randomValue();
       const nonce = randomValue();
       const verifier = randomValue(64);
-      pending.set(state, { nonce, verifier, created: now() });
+      pending.set(state, {
+        nonce, verifier, created: now(),
+        redirect: url.searchParams.get('mode') === 'redirect',
+      });
       const authorization = new URL(`${issuer}/protocol/openid-connect/auth`);
       authorization.search = new URLSearchParams({
         client_id: clientId,
@@ -133,7 +144,7 @@ export function createOptionalOidc({ issuer, clientId, clientSecret, sessionSecr
       const request = state && pending.get(state);
       if (state) pending.delete(state);
       if (!request || now() - request.created > STATE_TTL_MS || url.searchParams.has('error')) {
-        popupResult(res, parentOrigin, false);
+        completeLogin(res, parentOrigin, request?.redirect, false);
         return true;
       }
       try {
@@ -162,10 +173,10 @@ export function createOptionalOidc({ issuer, clientId, clientSecret, sessionSecr
         const user = safeProfile(await userResponse.json());
         if (!user.sub || user.sub !== claims.sub) throw new Error('User profile did not match the ID token.');
         res.setHeader('Set-Cookie', sessionCookie(user));
-        popupResult(res, parentOrigin, true);
+        completeLogin(res, parentOrigin, request.redirect, true);
       } catch (error) {
         console.error(`OIDC callback failed: ${error.message}`);
-        popupResult(res, parentOrigin, false);
+        completeLogin(res, parentOrigin, request.redirect, false);
       }
       return true;
     }
