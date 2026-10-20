@@ -76,6 +76,8 @@ test('loads the real game, connects, renders and responds to input', async ({ pa
     const [width, height] = await canvas.evaluate(c => [c.width, c.height]);
     return width / height;
   }).toBeCloseTo(viewport.width / viewport.height, 2);
+  if (viewport.width >= 800 && viewport.height >= 600)
+    expect(await canvas.evaluate(c => [c.width, c.height])).toEqual([viewport.width, viewport.height]);
   await page.getByRole('button', { name: 'Fullscreen' }).click();
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
   rect = await canvas.boundingBox();

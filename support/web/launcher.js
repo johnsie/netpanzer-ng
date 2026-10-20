@@ -23,9 +23,12 @@ let resizeTimer = 0;
 function browserGameSize() {
   const width = window.innerWidth;
   const height = window.innerHeight;
-  // Keep the viewport aspect ratio while retaining the game's native minimum
-  // height. CSS scales this lighter surface to the exact viewport dimensions.
-  const scale = Math.max(800 / width, 600 / height);
+  // Render at the viewport's native CSS-pixel size whenever possible. Scaling
+  // every desktop viewport down to the 800x600 minimum and stretching it back
+  // with CSS makes small HUD text visibly blurry at fractional scale factors.
+  // Smaller viewports still retain the game's minimum dimensions and aspect
+  // ratio so the interface remains usable and mouse coordinates stay aligned.
+  const scale = Math.max(1, 800 / width, 600 / height);
   return [Math.round(width * scale), Math.round(height * scale)];
 }
 
