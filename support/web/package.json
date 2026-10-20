@@ -2,7 +2,7 @@
   "name": "netpanzer-web-dev",
   "private": true,
   "type": "module",
-  "scripts": { "start": "node server.mjs", "test": "node --test gateway.test.mjs servers.test.mjs", "test:browser": "playwright test" },
+  "scripts": { "start": "node server.mjs", "test": "node --test auth.test.mjs gateway.test.mjs servers.test.mjs", "test:browser": "playwright test" },
   "dependencies": { "ws": "8.21.3" },
   "devDependencies": { "@playwright/test": "1.56.1" }
 }

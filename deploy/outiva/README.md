@@ -29,6 +29,8 @@ NetPanzer clients should be able to join the Outiva server directly.
 - `systemd/netpanzer-game.service`: native dedicated server.
 - `config/servers.json`: allowlisted matchmaking targets.
 - `config/server.cfg`: initial game-server configuration.
+- `keycloak/netpanzer-client.json`: confidential OIDC client definition.
+- `configure-oidc.sh`: installs that client and the protected service secrets.
 
 ## Expected installation paths
 
@@ -145,3 +147,37 @@ sudo systemctl reload apache2
 
 The services bind to loopback by default. Keep firewall rules in place so they
 remain reachable only through the intended reverse-proxy path.
+
+## Optional Outiva account hand-off
+
+NetPanzer remains anonymous by default. A visitor who opens
+`netpanzer.outiva.com` directly is not redirected to Accounts and can choose a
+callsign and play as a guest. When a user already signed in at `outiva.com`
+clicks Play, Outiva opens NetPanzer's authorization endpoint with
+`prompt=none`. Keycloak reuses its existing SSO session, and NetPanzer creates
+its own signed, HttpOnly session cookie. No access token is sent through a URL,
+the parent page, or the game iframe.
+
+After installing the updated systemd service, configure Keycloak and generate
+the NetPanzer secrets with:
+
+```sh
+cd /opt/netpanzer-ng
+sudo deploy/outiva/configure-oidc.sh
+```
+
+The script creates or updates a confidential client with these values:
+
+- Realm: `outiva`
+- Client ID: `netpanzer-web`
+- Client authentication: On (confidential client)
+- Standard flow: On; implicit, direct-access grants, and service accounts: Off
+- Valid redirect URI: `https://netpanzer.outiva.com/auth/callback`
+- Web origin: `https://netpanzer.outiva.com`
+- PKCE method: `S256`
+
+It obtains the generated client secret from Keycloak and stores it, together
+with a separate random session-signing secret, in `/etc/netpanzer/oidc.env` as
+root-owned mode `0640`. These values belong in that protected service file,
+not in source control or browser JavaScript. The issuer is
+`https://accounts.outiva.com/realms/outiva`.

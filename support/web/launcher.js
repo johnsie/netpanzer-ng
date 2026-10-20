@@ -3,6 +3,7 @@ const canvas = document.getElementById('canvas');
 const statusLabel = document.getElementById('status');
 const playButton = document.getElementById('play');
 const playerName = document.getElementById('player-name');
+const accountState = document.getElementById('account-state');
 const progress = document.querySelector('.progress');
 const progressFill = document.getElementById('progress-fill');
 // Versioned assets can live separately from the stable, same-origin gateway.
@@ -68,6 +69,36 @@ function setLoadingStatus(text) {
 const storedName = localStorage.getItem('netpanzer.playerName');
 playerName.value = storedName || `Player${Math.floor(1000 + Math.random() * 9000)}`;
 
+function callsignFor(profile) {
+  const source = profile.preferred_username || profile.name || profile.email?.split('@')[0] || '';
+  const callsign = source.replace(/[^A-Za-z0-9 _-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 20);
+  return /^[A-Za-z0-9 _-]{1,20}$/.test(callsign) ? callsign : null;
+}
+
+async function loadAccount() {
+  try {
+    const response = await fetch(new URL('auth/me', networkBase), {
+      credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(3000),
+    });
+    if (response.status === 200) {
+      const profile = await response.json();
+      const label = profile.name || profile.preferred_username || profile.email || 'Outiva user';
+      accountState.textContent = `Outiva account: ${label}`;
+      accountState.dataset.authenticated = 'true';
+      const callsign = callsignFor(profile);
+      if (callsign) {
+        playerName.value = callsign;
+        localStorage.setItem('netpanzer.playerName', callsign);
+      }
+      return;
+    }
+  } catch (error) {
+    console.warn('Could not check the optional Outiva account session:', error);
+  }
+  accountState.textContent = 'Guest play — no Outiva account required';
+}
+const accountReady = loadAccount();
+
 function validPlayerName() {
   return /^[A-Za-z0-9 _-]{1,20}$/.test(playerName.value.trim());
 }
@@ -130,7 +161,8 @@ var Module = {
   print: (...args) => console.log(...args),
   printErr: (...args) => console.error(...args),
   setStatus: text => { if (!started && text) setLoadingStatus(text); },
-  onRuntimeInitialized() {
+  async onRuntimeInitialized() {
+    await accountReady;
     runtimeReady = true;
     clientProtocol = Module.ccall('netpanzer_web_protocol', 'number', [], []);
     playerName.disabled = false;

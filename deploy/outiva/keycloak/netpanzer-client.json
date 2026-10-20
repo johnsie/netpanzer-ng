@@ -1,0 +1,30 @@
+{
+  "clientId": "netpanzer-web",
+  "name": "NetPanzer",
+  "description": "Optional Outiva sign-in for the NetPanzer browser game",
+  "enabled": true,
+  "protocol": "openid-connect",
+  "publicClient": false,
+  "clientAuthenticatorType": "client-secret",
+  "standardFlowEnabled": true,
+  "implicitFlowEnabled": false,
+  "directAccessGrantsEnabled": false,
+  "serviceAccountsEnabled": false,
+  "authorizationServicesEnabled": false,
+  "frontchannelLogout": true,
+  "rootUrl": "https://netpanzer.outiva.com",
+  "baseUrl": "https://netpanzer.outiva.com/",
+  "adminUrl": "https://netpanzer.outiva.com/",
+  "redirectUris": [
+    "https://netpanzer.outiva.com/auth/callback"
+  ],
+  "webOrigins": [
+    "https://netpanzer.outiva.com"
+  ],
+  "attributes": {
+    "pkce.code.challenge.method": "S256",
+    "post.logout.redirect.uris": "https://netpanzer.outiva.com/"
+  },
+  "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"],
+  "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"]
+}

@@ -35,6 +35,8 @@
   .launch-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
   .identity { min-width: 0; }
   .identity label { display: block; margin-bottom: 7px; color: #89936c; font-size: 10px; letter-spacing: .13em; text-transform: uppercase; }
+  #account-state { display: block; min-height: 1.4em; margin-top: 6px; color: #929b79; font-size: 10px; line-height: 1.4; }
+  #account-state[data-authenticated="true"] { color: #d7df91; }
   .identity input { width: 100%; height: 48px; padding: 0 14px; color: #eef2d9; background: #070906; border: 1px solid #4b5239; font: 15px 'Courier New', monospace; }
   .identity input:focus-visible { outline: 2px solid #edf2b3; outline-offset: 2px; }
   #play { align-self: end; min-width: 174px; height: 48px; padding: 0 18px; color: #11140c; background: #d3dc73; border: 1px solid #d3dc73; }
@@ -101,6 +103,7 @@
       <div class="identity">
         <label for="player-name">Commander callsign</label>
         <input id="player-name" name="player-name" maxlength="20" autocomplete="nickname" spellcheck="false" placeholder="Enter your name" disabled>
+        <span id="account-state" role="status">Checking optional Outiva account…</span>
       </div>
       <button id="play" disabled>Loading…</button>
     </div>

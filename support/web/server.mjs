@@ -9,6 +9,7 @@ import { spawn } from 'node:child_process';
 import { parseArgs } from 'node:util';
 import { attachGateway, loopbackProxyClientIP } from './gateway.mjs';
 import { validateServers, createServerCatalog } from './servers.mjs';
+import { createOptionalOidc } from './auth.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const { values } = parseArgs({ options: {
@@ -33,6 +34,15 @@ const targets = validateServers(values.servers ? JSON.parse(await readFile(value
 if (values.native && !targets.some(s => s.host === '127.0.0.1' && s.port === gamePort))
   throw new Error('--servers must include the local --native server.');
 const getServers = createServerCatalog(targets);
+const publicOrigin = values.origin || `http://${values.bind}:${webPort}`;
+const oidc = createOptionalOidc({
+  issuer: process.env.NETPANZER_OIDC_ISSUER,
+  clientId: process.env.NETPANZER_OIDC_CLIENT_ID,
+  clientSecret: process.env.NETPANZER_OIDC_CLIENT_SECRET,
+  sessionSecret: process.env.NETPANZER_SESSION_SECRET,
+  origin: publicOrigin,
+  parentOrigin: process.env.NETPANZER_OUTIVA_ORIGIN || 'https://outiva.com',
+});
 const children = [];
 let shuttingDown = false;
 function stop() {
@@ -54,7 +64,9 @@ function acceptsGzip(header = '') {
   });
 }
 const server = http.createServer(async (req, res) => {
-  const name = new URL(req.url, 'http://localhost').pathname.slice(1) || 'index.html';
+  const url = new URL(req.url, publicOrigin);
+  if (await oidc.handle(req, res, url)) return;
+  const name = url.pathname.slice(1) || 'index.html';
   if (name === 'servers' && req.method === 'GET') {
     try {
       const servers = await getServers();
@@ -157,4 +169,4 @@ game.maxunits = 160
   }
 }
 server.on('error', error => { console.error(error.message); process.exitCode = 1; stop(); });
-server.listen(webPort, values.bind, () => console.log(`Play at http://${values.bind}:${webPort} (game → ${values['game-host']}:${gamePort})`));
+server.listen(webPort, values.bind, () => console.log(`Play at http://${values.bind}:${webPort} (game → ${values['game-host']}:${gamePort}, OIDC ${oidc.enabled ? 'enabled' : 'disabled'})`));
