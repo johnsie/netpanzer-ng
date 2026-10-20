@@ -85,7 +85,7 @@ async function loadAccount() {
       const label = profile.name || profile.preferred_username || profile.email || 'Outiva user';
       accountState.textContent = `Outiva account: ${label}`;
       accountState.dataset.authenticated = 'true';
-      const callsign = callsignFor(profile);
+      const callsign = callsignFor({ ...profile, preferred_username: profile.callsign || profile.preferred_username });
       if (callsign) {
         playerName.value = callsign;
         localStorage.setItem('netpanzer.playerName', callsign);
@@ -101,6 +101,15 @@ const accountReady = loadAccount();
 
 function validPlayerName() {
   return /^[A-Za-z0-9 _-]{1,20}$/.test(playerName.value.trim());
+}
+
+function saveAccountCallsign() {
+  if (accountState.dataset.authenticated !== 'true' || !validPlayerName()) return;
+  fetch(new URL('auth/callsign', networkBase), {
+    method: 'PUT', credentials: 'same-origin', keepalive: true,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ callsign: playerName.value.trim() }),
+  }).catch(error => console.warn('Could not save the Outiva account callsign:', error));
 }
 
 function updatePlayState() {
@@ -153,7 +162,10 @@ async function prepareMatch() {
 playerName.addEventListener('input', updatePlayState);
 playerName.addEventListener('change', () => {
   const name = playerName.value.trim();
-  if (validPlayerName()) localStorage.setItem('netpanzer.playerName', name);
+  if (validPlayerName()) {
+    localStorage.setItem('netpanzer.playerName', name);
+    saveAccountCallsign();
+  }
 });
 var Module = {
   canvas,
@@ -264,6 +276,7 @@ playButton.onclick = () => {
   started = true;
   document.body.classList.add('game-launching');
   localStorage.setItem('netpanzer.playerName', name);
+  saveAccountCallsign();
   playButton.disabled = true;
   playButton.textContent = 'Playing';
   const address = `${selectedServer.host}:${selectedServer.port}`;

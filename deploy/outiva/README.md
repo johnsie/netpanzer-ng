@@ -160,6 +160,12 @@ browser returns to the embedded game. A second silent round trip restores
 Outiva's memory-only session after the page navigation. This flow uses no
 popup and sends no access token through a URL or the game iframe.
 
+For signed-in players, the most recently used valid callsign is stored against
+the immutable Keycloak `sub` in `/var/lib/netpanzer/callsigns.json` and restored
+on later visits, including from another browser. Guest callsigns remain local
+to that browser. The systemd sandbox permits the gateway to write only within
+`/var/lib/netpanzer`; the callsign file is created mode `0600`.
+
 After installing the updated systemd service, configure Keycloak and generate
 the NetPanzer secrets with:
 

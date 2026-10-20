@@ -43,6 +43,7 @@ const oidc = createOptionalOidc({
   origin: publicOrigin,
   parentOrigin: process.env.NETPANZER_OUTIVA_ORIGIN || 'https://outiva.com',
   backchannelUrl: process.env.NETPANZER_OIDC_BACKCHANNEL_URL,
+  callsignFile: process.env.NETPANZER_CALLSIGN_FILE || '/var/lib/netpanzer/callsigns.json',
 });
 const children = [];
 let shuttingDown = false;

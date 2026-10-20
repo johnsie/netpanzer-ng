@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { once } from 'node:events';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { createOptionalOidc } from './auth.mjs';
 
 const issuer = 'https://accounts.example/realms/outiva';
@@ -10,10 +13,13 @@ const jwt = claims => `e30.${Buffer.from(JSON.stringify(claims)).toString('base6
 
 test('OIDC callback creates a signed NetPanzer session while guests remain anonymous', async t => {
   let nonce;
+  const stateDirectory = await mkdtemp(path.join(tmpdir(), 'netpanzer-auth-test-'));
+  const callsignFile = path.join(stateDirectory, 'callsigns.json');
+  t.after(() => rm(stateDirectory, { recursive: true, force: true }));
   const oidc = createOptionalOidc({
     issuer, clientId, clientSecret: 'client-secret', sessionSecret: 's'.repeat(48),
     origin: 'https://netpanzer.example', parentOrigin: 'https://outiva.example',
-    backchannelUrl: 'http://127.0.0.1:8180/realms/outiva', now: () => 1_000_000,
+    backchannelUrl: 'http://127.0.0.1:8180/realms/outiva', callsignFile, now: () => 1_000_000,
     fetchImpl: async (url, options) => {
       if (url === 'http://127.0.0.1:8180/realms/outiva/protocol/openid-connect/token') return new Response(JSON.stringify({
         access_token: 'access',
@@ -49,9 +55,21 @@ test('OIDC callback creates a signed NetPanzer session while guests remain anony
   const me = await fetch(`${base}/auth/me`, { headers: { Cookie: cookie } });
   assert.equal(me.status, 200);
   assert.deepEqual(await me.json(), {
-    sub: 'user-123', name: 'Test Commander', preferred_username: '', email: 'test@example.com',
+    sub: 'user-123', name: 'Test Commander', preferred_username: '', email: 'test@example.com', callsign: '',
   });
   assert.equal((await fetch(`${base}/auth/me`, { headers: { Cookie: `${cookie}tampered` } })).status, 204);
+  assert.equal((await fetch(`${base}/auth/callsign`, {
+    method: 'PUT', headers: { Cookie: cookie, Origin: 'https://netpanzer.example', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ callsign: 'Last Commander' }),
+  })).status, 204);
+  const remembered = await fetch(`${base}/auth/me`, { headers: { Cookie: cookie } });
+  assert.equal((await remembered.json()).callsign, 'Last Commander');
+  const saved = JSON.parse(await readFile(callsignFile, 'utf8'));
+  assert.equal(saved.players['user-123'].callsign, 'Last Commander');
+  assert.equal((await fetch(`${base}/auth/callsign`, {
+    method: 'PUT', headers: { Origin: 'https://netpanzer.example', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ callsign: 'Nobody' }),
+  })).status, 401);
 
   const guestLogin = await fetch(`${base}/auth/login?prompt=none&mode=redirect`, { redirect: 'manual' });
   const guestAuthorization = new URL(guestLogin.headers.get('location'));

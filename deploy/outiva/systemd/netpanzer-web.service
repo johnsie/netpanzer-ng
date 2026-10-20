@@ -19,6 +19,7 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadOnlyPaths=/srv/netpanzer/current /etc/netpanzer
+ReadWritePaths=/var/lib/netpanzer
 
 [Install]
 WantedBy=multi-user.target

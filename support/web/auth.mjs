@@ -1,4 +1,6 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 const SESSION_COOKIE = '__Host-netpanzer_session';
 const SESSION_SECONDS = 8 * 60 * 60;
@@ -6,6 +8,57 @@ const STATE_TTL_MS = 5 * 60 * 1000;
 
 const base64url = value => Buffer.from(value).toString('base64url');
 const randomValue = (bytes = 32) => randomBytes(bytes).toString('base64url');
+const validCallsign = value => typeof value === 'string' && /^[A-Za-z0-9 _-]{1,20}$/.test(value.trim());
+
+function createCallsignStore(filename) {
+  const players = new Map();
+  let loaded;
+  let saving = Promise.resolve();
+  async function load() {
+    if (!filename || loaded) return loaded;
+    loaded = (async () => {
+      try {
+        const document = JSON.parse(await readFile(filename, 'utf8'));
+        for (const [sub, entry] of Object.entries(document.players || {})) {
+          if (validCallsign(entry?.callsign)) players.set(sub, entry);
+        }
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
+    })();
+    return loaded;
+  }
+  return {
+    async get(sub) {
+      await load();
+      return players.get(sub)?.callsign || '';
+    },
+    async set(sub, callsign) {
+      await load();
+      players.set(sub, { callsign, updatedAt: new Date().toISOString() });
+      if (!filename) return;
+      saving = saving.catch(() => {}).then(async () => {
+        await mkdir(path.dirname(filename), { recursive: true, mode: 0o750 });
+        const temporary = `${filename}.${process.pid}.tmp`;
+        const document = { version: 1, players: Object.fromEntries(players) };
+        await writeFile(temporary, `${JSON.stringify(document, null, 2)}\n`, { mode: 0o600 });
+        await rename(temporary, filename);
+      });
+      await saving;
+    },
+  };
+}
+
+async function jsonBody(req, limit = 1024) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > limit) throw new Error('too_large');
+    chunks.push(chunk);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
 
 function cookies(header = '') {
   return Object.fromEntries(header.split(';').map(part => {
@@ -63,7 +116,7 @@ function completeLogin(res, parentOrigin, redirect, ok) {
 
 export function createOptionalOidc({ issuer, clientId, clientSecret, sessionSecret,
   origin, parentOrigin = 'https://outiva.com', backchannelUrl = issuer,
-  fetchImpl = fetch, now = () => Date.now() }) {
+  callsignFile, fetchImpl = fetch, now = () => Date.now() }) {
   const configured = [issuer, clientId, clientSecret, sessionSecret].filter(Boolean).length;
   if (configured === 0) return {
     enabled: false,
@@ -79,6 +132,7 @@ export function createOptionalOidc({ issuer, clientId, clientSecret, sessionSecr
   parentOrigin = new URL(parentOrigin).origin;
   const redirectUri = `${origin}/auth/callback`;
   const pending = new Map();
+  const callsigns = createCallsignStore(callsignFile);
 
   function sign(payload) {
     return createHmac('sha256', sessionSecret).update(payload).digest('base64url');
@@ -108,7 +162,35 @@ export function createOptionalOidc({ issuer, clientId, clientSecret, sessionSecr
     if (url.pathname === '/auth/me' && req.method === 'GET') {
       const current = profile(req);
       if (!current) send(res, 204);
-      else send(res, 200, { 'Content-Type': 'application/json; charset=utf-8' }, JSON.stringify(current));
+      else {
+        try {
+          send(res, 200, { 'Content-Type': 'application/json; charset=utf-8' },
+            JSON.stringify({ ...current, callsign: await callsigns.get(current.sub) }));
+        } catch (error) {
+          console.error(`Could not load callsign: ${error.message}`);
+          send(res, 500);
+        }
+      }
+      return true;
+    }
+
+    if (url.pathname === '/auth/callsign' && req.method === 'PUT') {
+      const current = profile(req);
+      if (!current) send(res, 401);
+      else if (req.headers.origin !== origin || !req.headers['content-type']?.startsWith('application/json')) send(res, 403);
+      else {
+        try {
+          const callsign = (await jsonBody(req)).callsign?.trim();
+          if (!validCallsign(callsign)) send(res, 400);
+          else {
+            await callsigns.set(current.sub, callsign);
+            send(res, 204);
+          }
+        } catch (error) {
+          console.error(`Could not save callsign: ${error.message}`);
+          send(res, error.message === 'too_large' ? 413 : error instanceof SyntaxError ? 400 : 500);
+        }
+      }
       return true;
     }
 
