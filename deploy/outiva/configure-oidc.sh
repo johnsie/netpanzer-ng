@@ -51,10 +51,10 @@ client_secret=$(
     --fields value --format csv --noquotes
 )
 if [ -z "$client_secret" ]; then
-  client_secret=$(
-    "$KCADM" create "clients/$client_id/client-secret" --config "$admin_config" -r outiva \
-      --fields value --format csv --noquotes
+  client_secret_json=$(
+    "$KCADM" create "clients/$client_id/client-secret" --config "$admin_config" -r outiva -o
   )
+  client_secret=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"$client_secret_json")
 fi
 if [ -r "$NETPANZER_ENV" ]; then
   session_secret=$(sed -n 's/^NETPANZER_SESSION_SECRET=//p' "$NETPANZER_ENV")
