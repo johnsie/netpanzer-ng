@@ -12,12 +12,14 @@ test('OIDC callback creates a signed NetPanzer session while guests remain anony
   let nonce;
   const oidc = createOptionalOidc({
     issuer, clientId, clientSecret: 'client-secret', sessionSecret: 's'.repeat(48),
-    origin: 'https://netpanzer.example', parentOrigin: 'https://outiva.example', now: () => 1_000_000,
+    origin: 'https://netpanzer.example', parentOrigin: 'https://outiva.example',
+    backchannelUrl: 'http://127.0.0.1:8180/realms/outiva', now: () => 1_000_000,
     fetchImpl: async (url, options) => {
-      if (url.endsWith('/token')) return new Response(JSON.stringify({
+      if (url === 'http://127.0.0.1:8180/realms/outiva/protocol/openid-connect/token') return new Response(JSON.stringify({
         access_token: 'access',
         id_token: jwt({ iss: issuer, aud: clientId, nonce, exp: 2000, sub: 'user-123' }),
       }), { status: 200 });
+      assert.equal(url, 'http://127.0.0.1:8180/realms/outiva/protocol/openid-connect/userinfo');
       assert.equal(options.headers.Authorization, 'Bearer access');
       return new Response(JSON.stringify({ sub: 'user-123', name: 'Test Commander', email: 'test@example.com' }), { status: 200 });
     },

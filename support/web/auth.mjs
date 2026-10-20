@@ -54,7 +54,8 @@ function popupResult(res, parentOrigin, ok) {
 }
 
 export function createOptionalOidc({ issuer, clientId, clientSecret, sessionSecret,
-  origin, parentOrigin = 'https://outiva.com', fetchImpl = fetch, now = () => Date.now() }) {
+  origin, parentOrigin = 'https://outiva.com', backchannelUrl = issuer,
+  fetchImpl = fetch, now = () => Date.now() }) {
   const configured = [issuer, clientId, clientSecret, sessionSecret].filter(Boolean).length;
   if (configured === 0) return {
     enabled: false,
@@ -65,6 +66,7 @@ export function createOptionalOidc({ issuer, clientId, clientSecret, sessionSecr
   if (Buffer.byteLength(sessionSecret) < 32) throw new Error('NETPANZER_SESSION_SECRET must be at least 32 bytes.');
 
   issuer = issuer.replace(/\/$/, '');
+  backchannelUrl = backchannelUrl.replace(/\/$/, '');
   origin = new URL(origin).origin;
   parentOrigin = new URL(parentOrigin).origin;
   const redirectUri = `${origin}/auth/callback`;
@@ -135,7 +137,7 @@ export function createOptionalOidc({ issuer, clientId, clientSecret, sessionSecr
         return true;
       }
       try {
-        const tokenResponse = await fetchImpl(`${issuer}/protocol/openid-connect/token`, {
+        const tokenResponse = await fetchImpl(`${backchannelUrl}/protocol/openid-connect/token`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
@@ -153,7 +155,7 @@ export function createOptionalOidc({ issuer, clientId, clientSecret, sessionSecr
         const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
         if (claims.iss !== issuer || !audiences.includes(clientId) || claims.nonce !== request.nonce ||
             claims.exp * 1000 <= now() || !claims.sub) throw new Error('Invalid identity claims.');
-        const userResponse = await fetchImpl(`${issuer}/protocol/openid-connect/userinfo`, {
+        const userResponse = await fetchImpl(`${backchannelUrl}/protocol/openid-connect/userinfo`, {
           headers: { Authorization: `Bearer ${tokens.access_token}` },
         });
         if (!userResponse.ok) throw new Error('User profile request failed.');

@@ -180,4 +180,6 @@ It obtains the generated client secret from Keycloak and stores it, together
 with a separate random session-signing secret, in `/etc/netpanzer/oidc.env` as
 root-owned mode `0640`. These values belong in that protected service file,
 not in source control or browser JavaScript. The issuer is
-`https://accounts.outiva.com/realms/outiva`.
+`https://accounts.outiva.com/realms/outiva`. The server-side token and userinfo
+requests use Keycloak's loopback endpoint, so they do not depend on public DNS;
+tokens are still validated against the public issuer.

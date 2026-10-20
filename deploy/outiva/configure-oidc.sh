@@ -67,6 +67,7 @@ secrets_tmp=$(mktemp /etc/netpanzer/oidc.env.XXXXXX)
 trap 'rm -f "$admin_config" "$secrets_tmp"' EXIT
 {
   echo 'NETPANZER_OIDC_ISSUER=https://accounts.outiva.com/realms/outiva'
+  echo 'NETPANZER_OIDC_BACKCHANNEL_URL=http://127.0.0.1:8180/realms/outiva'
   echo 'NETPANZER_OIDC_CLIENT_ID=netpanzer-web'
   printf 'NETPANZER_OIDC_CLIENT_SECRET=%s\n' "$client_secret"
   printf 'NETPANZER_SESSION_SECRET=%s\n' "$session_secret"

@@ -42,6 +42,7 @@ const oidc = createOptionalOidc({
   sessionSecret: process.env.NETPANZER_SESSION_SECRET,
   origin: publicOrigin,
   parentOrigin: process.env.NETPANZER_OUTIVA_ORIGIN || 'https://outiva.com',
+  backchannelUrl: process.env.NETPANZER_OIDC_BACKCHANNEL_URL,
 });
 const children = [];
 let shuttingDown = false;
